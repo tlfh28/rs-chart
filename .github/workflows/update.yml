@@ -1,0 +1,45 @@
+name: RS 데이터 갱신
+
+on:
+  schedule:
+    - cron: "40 7 * * 1-5"   # 평일 16:40 (한국시간) — 장 마감 후
+  workflow_dispatch:          # Actions 탭에서 수동 실행
+
+permissions:
+  contents: write
+  pages: write
+  id-token: write
+
+concurrency:
+  group: rs-update
+  cancel-in-progress: false
+
+jobs:
+  build-deploy:
+    runs-on: ubuntu-latest
+    timeout-minutes: 60
+    environment:
+      name: github-pages
+      url: ${{ steps.deploy.outputs.page_url }}
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+          cache: pip
+      - run: pip install -r requirements.txt
+      - name: 전 종목 데이터 수집 · RS 계산
+        run: python build_rs.py
+      - name: 갱신 기록 커밋 (60일 비활성 시 예약 실행이 멈추는 것 방지)
+        run: |
+          python -c "import json;print(json.load(open('docs/data/summary.json'))['meta'])" > last_update.txt
+          git config user.name "rs-bot"
+          git config user.email "rs-bot@users.noreply.github.com"
+          git add last_update.txt
+          git diff --cached --quiet || git commit -m "데이터 갱신 $(date +%F)" && git push
+      - uses: actions/configure-pages@v5
+      - uses: actions/upload-pages-artifact@v3
+        with:
+          path: docs
+      - id: deploy
+        uses: actions/deploy-pages@v4

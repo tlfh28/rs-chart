@@ -1,0 +1,69 @@
+:root{
+  --bg:#f5f6f8; --card:#fff; --ink:#16181d; --mute:#6b7280; --line:#e5e7eb;
+  --up:#d6336c; --down:#1c7ed6; --accent:#0f766e; --rs:#7048e8;
+}
+*{box-sizing:border-box}
+body{margin:0;background:var(--bg);color:var(--ink);
+  font-family:"Pretendard","Apple SD Gothic Neo","Malgun Gothic",system-ui,sans-serif;font-size:14px}
+.top{position:sticky;top:0;z-index:20;display:flex;align-items:center;gap:20px;
+  padding:12px 24px;background:#111827;color:#fff}
+.brand{font-weight:700;font-size:17px;white-space:nowrap}
+.brand span{font-weight:400;font-size:12px;color:#9ca3af;margin-left:6px}
+.search{position:relative;flex:1;max-width:520px}
+.search input{width:100%;padding:10px 14px;border-radius:8px;border:0;font-size:15px;outline:none}
+#sugg{position:absolute;top:44px;left:0;right:0;margin:0;padding:4px 0;list-style:none;background:#fff;
+  color:var(--ink);border-radius:8px;box-shadow:0 8px 24px rgba(0,0,0,.18);max-height:360px;overflow:auto}
+#sugg li{padding:8px 14px;cursor:pointer;display:flex;justify-content:space-between;gap:10px}
+#sugg li.on,#sugg li:hover{background:#eef2ff}
+#sugg small{color:var(--mute)}
+.asof{margin-left:auto;font-size:12px;color:#9ca3af;white-space:nowrap}
+main{max-width:1280px;margin:0 auto;padding:20px 24px 40px}
+.card{background:var(--card);border-radius:12px;padding:20px 22px;margin-bottom:20px;
+  box-shadow:0 1px 2px rgba(0,0,0,.05)}
+.stock-head{display:flex;justify-content:space-between;align-items:flex-start}
+h1{margin:0;font-size:24px}
+h2{margin:0;font-size:18px}
+.sub{color:var(--mute);margin-top:4px}
+.rs-big{text-align:right}
+.rs-big .lbl{font-size:12px;color:var(--mute)}
+.rs-big .val{font-size:44px;font-weight:800;line-height:1;color:var(--rs)}
+.stats{display:flex;flex-wrap:wrap;gap:8px;margin:14px 0 10px}
+.stat{background:#f3f4f6;border-radius:8px;padding:6px 10px;font-size:13px}
+.stat b{margin-left:4px}
+.badge{display:inline-block;padding:2px 8px;border-radius:999px;font-size:12px;font-weight:600;white-space:nowrap}
+.b-nh{background:#e6fcf5;color:#087f5b}
+.b-lead{background:#fff4e6;color:#d9480f}
+.b-up{background:#f3f0ff;color:#5f3dc4}
+.toolbar{display:flex;align-items:center;justify-content:space-between;margin:6px 0 8px;gap:12px;flex-wrap:wrap}
+.seg button{border:1px solid var(--line);background:#fff;padding:5px 12px;cursor:pointer;font-size:13px}
+.seg button:first-child{border-radius:6px 0 0 6px}
+.seg button:last-child{border-radius:0 6px 6px 0}
+.seg button.on{background:#111827;color:#fff;border-color:#111827}
+.legend{font-size:12px;color:var(--mute);font-variant-numeric:tabular-nums}
+.legend b{color:var(--ink);font-weight:600}
+#chart{height:620px}
+.pane-labels{display:flex;justify-content:space-between;font-size:11px;color:var(--mute);margin-top:6px}
+.list-head{display:flex;justify-content:space-between;align-items:center;gap:12px;flex-wrap:wrap;margin-bottom:12px}
+.filters{display:flex;gap:8px;flex-wrap:wrap}
+.filters select,.filters input{padding:7px 10px;border:1px solid var(--line);border-radius:6px;font-size:13px;background:#fff}
+.table-wrap{overflow-x:auto}
+table{width:100%;border-collapse:collapse;font-variant-numeric:tabular-nums}
+th,td{padding:8px 10px;text-align:right;border-bottom:1px solid var(--line);white-space:nowrap}
+th{font-size:12px;color:var(--mute);font-weight:600;cursor:pointer;user-select:none;background:#fafafa;position:sticky;top:0}
+th.sorted::after{content:" ▼"}
+th.sorted.asc::after{content:" ▲"}
+.l{text-align:left}
+tbody tr{cursor:pointer}
+tbody tr:hover{background:#f8f9ff}
+td.name b{font-weight:600}
+td.name small{color:var(--mute);margin-left:6px}
+td.sec{max-width:180px;overflow:hidden;text-overflow:ellipsis;color:var(--mute)}
+.rs-cell{font-weight:700}
+.up{color:var(--up)} .down{color:var(--down)}
+.more{display:flex;justify-content:space-between;align-items:center;margin-top:12px;color:var(--mute)}
+.more button{padding:7px 16px;border:1px solid var(--line);border-radius:6px;background:#fff;cursor:pointer}
+footer{font-size:12px;color:var(--mute);line-height:1.6}
+@media (max-width:720px){
+  .top{flex-wrap:wrap;padding:10px 14px}.asof{display:none}
+  main{padding:12px}#chart{height:520px}.rs-big .val{font-size:34px}
+}

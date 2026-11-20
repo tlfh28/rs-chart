@@ -1,0 +1,89 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<meta name="robots" content="noindex">
+<title>RS 차트 · 코스피·코스닥</title>
+<link rel="icon" href="data:,">
+<link rel="stylesheet" href="style.css">
+</head>
+<body>
+<header class="top">
+  <div class="brand">RS 차트 <span>코스피 · 코스닥 상대강도</span></div>
+  <div class="search">
+    <input id="q" type="search" placeholder="종목명 또는 코드 검색 (예: 삼성전자, 005930)" autocomplete="off">
+    <ul id="sugg" hidden></ul>
+  </div>
+  <div class="asof" id="asof"></div>
+</header>
+
+<main>
+  <section id="stock" class="card" hidden>
+    <div class="stock-head">
+      <div>
+        <h1 id="s-name"></h1>
+        <div class="sub" id="s-sub"></div>
+      </div>
+      <div class="rs-big">
+        <div class="lbl">RS 점수</div>
+        <div class="val" id="s-rs">–</div>
+      </div>
+    </div>
+    <div class="stats" id="s-stats"></div>
+    <div class="toolbar">
+      <div class="seg" id="range">
+        <button data-r="126">6개월</button><button data-r="250" class="on">1년</button><button data-r="600">전체</button>
+      </div>
+      <div class="legend" id="legend"></div>
+    </div>
+    <div id="chart"></div>
+    <div class="pane-labels"><span>주가 · 거래량</span><span>RS 라인 (종가 ÷ 지수, 시작=100) · 점 = 52주 신고가</span><span>RS 점수 (1~99)</span></div>
+  </section>
+
+  <section class="card">
+    <div class="list-head">
+      <h2>RS 순위</h2>
+      <div class="filters">
+        <select id="f-mkt"><option value="">전체 시장</option><option>KOSPI</option><option>KOSDAQ</option></select>
+        <select id="f-cap">
+          <option value="0">시총 전체</option><option value="1000">1,000억↑</option>
+          <option value="5000">5,000억↑</option><option value="10000">1조↑</option>
+        </select>
+        <select id="f-rs">
+          <option value="0">RS 전체</option><option value="70">RS 70↑</option>
+          <option value="80">RS 80↑</option><option value="90">RS 90↑</option>
+        </select>
+        <select id="f-sig">
+          <option value="">신호 전체</option>
+          <option value="nh">RS 라인 52주 신고가</option>
+          <option value="lead">RS 라인 선행 (주가는 아직 신고가 아님)</option>
+          <option value="up">RS 급상승 (1개월 +20↑)</option>
+        </select>
+        <input id="f-sec" type="search" placeholder="업종 검색">
+      </div>
+    </div>
+    <div class="table-wrap">
+      <table id="tbl">
+        <thead><tr>
+          <th data-k="1" class="l">종목</th><th data-k="3" class="l">업종</th>
+          <th data-k="4">시총(억)</th><th data-k="5">종가</th><th data-k="6">등락</th>
+          <th data-k="7">RS</th><th data-k="8">1주전</th><th data-k="9">1개월전</th><th data-k="10">3개월전</th>
+          <th data-k="13">52주고점比</th><th data-k="11">신호</th>
+        </tr></thead>
+        <tbody></tbody>
+      </table>
+    </div>
+    <div class="more"><span id="cnt"></span><button id="more">더 보기</button></div>
+  </section>
+
+  <footer>
+    RS 점수: 최근 3·6·9·12개월 수익률을 2:1:1:1로 가중한 값의 코스피+코스닥 전 종목 내 백분위 (IBD 방식 근사).
+    RS 라인: 종가 ÷ 소속 시장 지수. 상장 3개월 미만 종목은 RS 점수 없음. 데이터: KIND · 네이버 금융. 투자 참고용.
+  </footer>
+</main>
+
+<script src="vendor/lightweight-charts.standalone.production.js"></script>
+<script src="app.js"></script>
+</body>
+</html>
