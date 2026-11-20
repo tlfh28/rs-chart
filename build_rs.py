@@ -69,6 +69,8 @@ def naver_market_sum(sosok):
         html = get(url).content.decode("euc-kr", errors="replace")
         codes = re.findall(r'<a href="/item/main\.naver\?code=(\d{6})" class="tltle">', html)
         if not codes:
+            if page == 1:
+                print("  시세 페이지에서 종목을 찾지 못함:", len(html), html[:200].replace("\n", " "))
             break
         df = pd.read_html(io.StringIO(html), match="종목명")[0]
         df = df.dropna(subset=["종목명"])
@@ -85,35 +87,94 @@ def naver_market_sum(sosok):
     return out
 
 
+def naver_mcap_api(market):
+    """네이버 모바일 API 시가총액 순위 → {code: (name, 시가총액(억), 종목유형)}"""
+    out = {}
+    for page in range(1, 40):
+        url = (f"https://m.stock.naver.com/api/stocks/marketValue/{market}"
+               f"?page={page}&pageSize=100")
+        j = get(url).json()
+        items = j.get("stocks") or []
+        if page == 1 and items:
+            print("  시총 API 예시:", {k: items[0].get(k) for k in
+                                     ("itemCode", "stockName", "marketValue", "stockEndType")})
+        if not items:
+            break
+        for it in items:
+            mv = pd.to_numeric(str(it.get("marketValue", "")).replace(",", ""), errors="coerce")
+            out[it["itemCode"]] = (it.get("stockName", ""), None if pd.isna(mv) else int(mv),
+                                   it.get("stockEndType", ""))
+    return out
+
+
 ETF_PAT = re.compile(r"^(KODEX|TIGER|KBSTAR|RISE|ACE|SOL|HANARO|ARIRANG|KOSEF|PLUS|TIMEFOLIO|"
                      r"KIWOOM|WON|BNK|파워|마이티|히어로즈|에셋플러스|TRUSTON|1Q|UNICORN|DAISHIN343|VITA|"
                      r"FOCUS|마이다스|HK|KCGI|더제이)|ETN|스팩|선물|인버스|레버리지")
 
 
+CACHE = os.path.join(os.path.dirname(os.path.abspath(__file__)), "universe.json")
+
+
 def build_universe():
     rows = []
+    mcap_k, mcap_q = {}, {}
     try:
-        mcap_k = naver_market_sum(0)
-        mcap_q = naver_market_sum(1)
+        mcap_k, mcap_q = naver_mcap_api("KOSPI"), naver_mcap_api("KOSDAQ")
+        print(f"시총(API): 코스피 {len(mcap_k)}, 코스닥 {len(mcap_q)}")
     except Exception as e:
-        print("네이버 시가총액 수집 실패:", e)
-        mcap_k, mcap_q = {}, {}
-    try:
-        for mt, mk, mc in (("stockMkt", "KOSPI", mcap_k), ("kosdaqMkt", "KOSDAQ", mcap_q)):
-            df = kind_list(mt)
+        print("시총 API 실패:", e)
+    if not mcap_k:
+        try:
+            mcap_k, mcap_q = naver_market_sum(0), naver_market_sum(1)
+            print(f"시총(시세 페이지): 코스피 {len(mcap_k)}, 코스닥 {len(mcap_q)}")
+        except Exception as e:
+            print("네이버 시가총액 수집 실패:", e)
+    mc_all = {**mcap_k, **mcap_q}
+
+    kind = None
+    for attempt in range(4):
+        try:
+            kind = {mk: kind_list(mt) for mt, mk in (("stockMkt", "KOSPI"), ("kosdaqMkt", "KOSDAQ"))}
+            break
+        except Exception as e:
+            print(f"KIND 목록 실패({attempt + 1}/4):", e)
+            time.sleep(20)
+    if kind:
+        for mk, df in kind.items():
             for _, r in df.iterrows():
                 if "스팩" in r["회사명"]:
                     continue
                 code = r["종목코드"]
                 rows.append(dict(code=code, name=r["회사명"], market=mk,
                                  sector=str(r["업종"]) if pd.notna(r["업종"]) else "",
-                                 mcap=mc.get(code, (None, None))[1]))
+                                 mcap=(mc_all.get(code) or (None, None))[1]))
         print(f"KIND 종목 목록: {len(rows)}개")
-    except Exception as e:
-        print("KIND 목록 실패 → 네이버 목록으로 대체:", e)
-        rows = []
+        with open(CACHE, "w", encoding="utf-8") as f:
+            json.dump([{k: v for k, v in r.items() if k != "mcap"} for r in rows], f,
+                      ensure_ascii=False, indent=0)
+        return rows
+    if os.path.exists(CACHE):
+        base = json.load(open(CACHE, encoding="utf-8"))
+        known = {r["code"] for r in base}
+        for r in base:
+            r["mcap"] = (mc_all.get(r["code"]) or (None, None))[1]
+        # 저장본 이후 신규 상장 종목 추가 (네이버 목록 기준, 보통주만)
         for mk, mc in (("KOSPI", mcap_k), ("KOSDAQ", mcap_q)):
-            for code, (name, mcap) in mc.items():
+            for code, v in mc.items():
+                if code in known or not code.endswith("0") or ETF_PAT.search(v[0]):
+                    continue
+                if len(v) > 2 and v[2] and v[2] != "stock":
+                    continue
+                base.append(dict(code=code, name=v[0], market=mk, sector="", mcap=v[1]))
+        print(f"저장된 종목 목록 사용: {len(base)}개")
+        return base
+    if True:
+        print("KIND·저장본 없음 → 네이버 목록으로 대체")
+        for mk, mc in (("KOSPI", mcap_k), ("KOSDAQ", mcap_q)):
+            for code, v in mc.items():
+                name, mcap = v[0], v[1]
+                if len(v) > 2 and v[2] and v[2] != "stock":
+                    continue
                 if ETF_PAT.search(name) or not code.endswith("0"):
                     continue  # ETF·ETN·스팩·우선주 제외
                 rows.append(dict(code=code, name=name, market=mk, sector="", mcap=mcap))

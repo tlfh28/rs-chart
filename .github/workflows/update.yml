@@ -35,7 +35,7 @@ jobs:
           python -c "import json;print(json.load(open('docs/data/summary.json'))['meta'])" > last_update.txt
           git config user.name "rs-bot"
           git config user.email "rs-bot@users.noreply.github.com"
-          git add last_update.txt
+          git add last_update.txt universe.json 2>/dev/null || git add last_update.txt
           git diff --cached --quiet || git commit -m "데이터 갱신 $(date +%F)" && git push
       - uses: actions/configure-pages@v5
       - uses: actions/upload-pages-artifact@v3
