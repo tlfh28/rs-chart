@@ -107,7 +107,7 @@
       `<div class="stat">RS 1주 전<b>${r[C.rs1w] ?? '–'}</b></div>`,
       `<div class="stat">1개월 전<b>${r[C.rs1m] ?? '–'}</b></div>`,
       `<div class="stat">3개월 전<b>${r[C.rs3m] ?? '–'}</b></div>`,
-      `<div class="stat">52주 고점 대비<b>${r[C.fromHi]}%</b></div>`,
+      `<div class="stat">52주 고점 대비<b>${r[C.fromHi] ?? '–'}%</b></div>`,
       ...badges].join('');
     document.title = `${r[C.name]} RS ${r[C.rs] ?? ''} · RS 차트`;
     window.scrollTo({ top: 0, behavior: 'smooth' });
@@ -190,7 +190,7 @@
         cell(r[C.sector], 'l sec') + cell(fmt(r[C.mcap])) + cell(fmt(r[C.close])) +
         cell(`${c >= 0 ? '+' : ''}${c}%`, c > 0 ? 'up' : c < 0 ? 'down' : '') +
         cell(r[C.rs], 'rs-cell') + cell(r[C.rs1w]) + cell(r[C.rs1m]) + cell(r[C.rs3m]) +
-        cell(r[C.fromHi] + '%') + `<td>${sigs}</td></tr>`;
+        cell(r[C.fromHi] == null ? '–' : r[C.fromHi] + '%') + `<td>${sigs}</td></tr>`;
     }).join('');
     $('#cnt').textContent = `${fmt(rows.length)}종목 중 ${fmt(Math.min(shown, rows.length))}개 표시`;
     $('#more').hidden = shown >= rows.length;

@@ -137,6 +137,9 @@ def naver_daily(symbol, count=HIST_DAYS):
         recs.append((p[0], float(p[1]), float(p[2]), float(p[3]), float(p[4]), float(p[5])))
     df = pd.DataFrame(recs, columns=["date", "o", "h", "l", "c", "v"])
     df = df[df["c"] > 0]
+    # 거래정지일 등 시가·고가·저가가 0으로 오는 경우 종가로 채움
+    for k in ("o", "h", "l"):
+        df.loc[df[k] <= 0, k] = df["c"]
     return df.set_index("date")
 
 
@@ -184,6 +187,16 @@ def compute(universe, prices, idx):
     return cal, close, rs
 
 
+def clean(o):
+    if isinstance(o, float):
+        return None if (o != o or o in (float("inf"), float("-inf"))) else o
+    if isinstance(o, list):
+        return [clean(x) for x in o]
+    if isinstance(o, dict):
+        return {k: clean(v) for k, v in o.items()}
+    return o
+
+
 def main():
     t0 = time.time()
     os.makedirs(os.path.join(OUT_DIR, "s"), exist_ok=True)
@@ -222,7 +235,7 @@ def main():
         hi250 = sub["h"].loc[last250].max()
         last_c = round(float(sub["c"].iloc[-1]), 2)
         price_nh = bool(last_c >= hi250 * 0.9999)
-        from_hi = round((last_c / hi250 - 1) * 100, 1)
+        from_hi = round((last_c / hi250 - 1) * 100, 1) if hi250 > 0 else None
 
         def rs_at(k):
             v = rs_ser.iloc[-1 - k] if len(rs_ser) > k else np.nan
@@ -231,7 +244,7 @@ def main():
         prev_c = float(sub["c"].iloc[-2]) if len(sub) > 1 else last_c
         summary.append([
             c, u["name"], u["market"], u["sector"], u["mcap"], last_c,
-            round((last_c / prev_c - 1) * 100, 2),
+            round((last_c / prev_c - 1) * 100, 2) if prev_c > 0 else 0.0,
             rs_at(0), rs_at(5), rs_at(21), rs_at(63),
             int(rsl_nh), int(rsl_nh and not price_nh), from_hi,
             dates[-1] != as_of,     # 거래정지 등으로 최근일 데이터 없음
@@ -248,7 +261,7 @@ def main():
             "rs": [None if pd.isna(x) else int(x) for x in rs_hist.tolist()],
         }
         with open(os.path.join(OUT_DIR, "s", f"{c}.json"), "w", encoding="utf-8") as f:
-            json.dump(detail, f, ensure_ascii=False, separators=(",", ":"))
+            json.dump(clean(detail), f, ensure_ascii=False, separators=(",", ":"))
 
     meta = {
         "as_of": as_of,
@@ -264,7 +277,7 @@ def main():
             json.dump({"d": [int(x) for x in d.index], "c": d["c"].round(2).tolist()}, f,
                       separators=(",", ":"))
     with open(os.path.join(OUT_DIR, "summary.json"), "w", encoding="utf-8") as f:
-        json.dump({"meta": meta, "rows": summary}, f, ensure_ascii=False, separators=(",", ":"))
+        json.dump(clean({"meta": meta, "rows": summary}), f, ensure_ascii=False, separators=(",", ":"))
     print(f"완료: {len(summary)}개 종목, 기준일 {as_of}, {time.time() - t0:.0f}초")
 
 
