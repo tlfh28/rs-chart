@@ -1,7 +1,8 @@
 (() => {
   const LC = LightweightCharts;
   const $ = s => document.querySelector(s);
-  const C = { code:0,name:1,market:2,sector:3,mcap:4,close:5,chg:6,rs:7,rs1w:8,rs1m:9,rs3m:10,nh:11,lead:12,fromHi:13,stale:14 };
+  const C = { code:0,name:1,market:2,sector:3,mcap:4,close:5,chg:6,rs:7,rs1w:8,rs1m:9,rs3m:10,nh:11,lead:12,fromHi:13,stale:14,tt:15,ttm:16,vcp:17,dep:18,pivot:19,pvd:20,vdry:21,st:22 };
+  const ST = { brk:['돌파','b-brk'], near:['피벗 근접','b-near'], above:['피벗 위',''], base:['수축 중',''] };
   let ROWS = [], BY = {}, meta = {};
   const fmt = n => n == null ? '–' : Number(n).toLocaleString('ko-KR');
   const ds = d => { d = String(d); return `${d.slice(0,4)}-${d.slice(4,6)}-${d.slice(6)}`; };
@@ -12,7 +13,7 @@
     meta = j.meta; ROWS = j.rows;
     ROWS.forEach(r => BY[r[C.code]] = r);
     $('#asof').textContent = `기준일 ${ds(meta.as_of)} · ${fmt(meta.count)}종목`;
-    renderTable();
+    renderTable(); renderScreener();
     const h = location.hash.slice(1);
     openStock(BY[h] ? h : '005930', false);
   }).catch(() => { $('#asof').textContent = '데이터를 불러오지 못했습니다'; });
@@ -75,6 +76,9 @@
   const vol = chart.addSeries(LC.HistogramSeries, { priceFormat: { type: 'volume' }, priceScaleId: 'vol', lastValueVisible: false, priceLineVisible: false }, 0);
   vol.priceScale().applyOptions({ scaleMargins: { top: 0.82, bottom: 0 } });
   candle.priceScale().applyOptions({ scaleMargins: { top: 0.06, bottom: 0.2 } });
+  const maOpt = c => ({ color: c, lineWidth: 1, priceLineVisible: false, lastValueVisible: false, crosshairMarkerVisible: false });
+  const MA = [[50, '#f08c00'], [150, '#2f9e44'], [200, '#495057']].map(([n, c]) => [n, chart.addSeries(LC.LineSeries, maOpt(c), 0)]);
+  let pivotLine = null;
   // RS 점수: 70~100만 표시 (70 미만은 잘라냄), 5점 단위 눈금
   const rss = chart.addSeries(LC.LineSeries, {
     color: '#6741d9', lineWidth: 3, priceFormat: { type: 'price', precision: 0, minMove: 1 },
@@ -111,6 +115,10 @@
       `<div class="stat">3개월 전<b>${r[C.rs3m] ?? '–'}</b></div>`,
       `<div class="stat">52주 고점 대비<b>${r[C.fromHi] ?? '–'}%</b></div>`,
       ...badges].join('');
+    const mask = r[C.ttm] || 0, names = meta.tt_names || [];
+    $('#s-tt').innerHTML = names.length ? `<span class="h">트렌드 템플릿 ${r[C.tt] ?? 0}/8</span>` +
+      names.map((nm, i) => `<span class="t ${mask >> i & 1 ? 'ok' : ''}">${mask >> i & 1 ? '✓' : '✗'} ${nm}</span>`).join('') +
+      (r[C.dep] && r[C.dep].length ? `<span class="t ${r[C.vcp] ? 'ok' : ''}">수축 ${r[C.dep].map(x => x + '%').join(' → ')}${r[C.vcp] ? ' (VCP)' : ''}</span>` : '') : '';
     document.title = `${r[C.name]} RS ${r[C.rs] ?? ''} · RS 차트`;
     window.scrollTo({ top: 0, behavior: 'smooth' });
 
@@ -120,6 +128,14 @@
     candle.setData(t.map((time, i) => ({ time, open: d.o[i], high: d.h[i], low: d.l[i], close: d.c[i] })));
     vol.setData(t.map((time, i) => ({ time, value: d.v[i], color: d.c[i] >= d.o[i] ? 'rgba(214,51,108,.35)' : 'rgba(28,126,214,.35)' })));
     rss.setData(t.map((time, i) => d.rs[i] == null || d.rs[i] < 70 ? { time } : { time, value: d.rs[i] }));  // 70 미만은 표시 안 함
+    MA.forEach(([n, ser]) => {
+      let sum = 0; const out = [];
+      d.c.forEach((v, i) => { sum += v; if (i >= n) sum -= d.c[i - n]; out.push(i >= n - 1 ? { time: t[i], value: sum / n } : { time: t[i] }); });
+      ser.setData(out);
+    });
+    if (pivotLine) { candle.removePriceLine(pivotLine); pivotLine = null; }
+    if (r[C.pivot] && r[C.dep] && r[C.dep].length >= 2)
+      pivotLine = candle.createPriceLine({ price: r[C.pivot], color: '#e8590c', lineWidth: 1, lineStyle: LC.LineStyle.Dashed, axisLabelVisible: true, title: '피벗' });
     setPaneHeights();
     applyRange();
     updateLegend(null);
@@ -176,7 +192,7 @@
     });
     const cell = (v, cls = '') => `<td class="${cls}">${v ?? '–'}</td>`;
     $('#tbl tbody').innerHTML = rows.slice(0, shown).map(r => {
-      const sigs = (r[C.nh] ? '<span class="badge b-nh">신고가</span>' : '');
+      const sigs = (r[C.nh] ? '<span class="badge b-nh">신고가</span> ' : '') + (r[C.tt] === 8 && r[C.vcp] ? '<span class="badge b-vcp">VCP</span>' : '');
       const c = r[C.chg];
       return `<tr data-c="${r[C.code]}"><td class="l name"><b>${r[C.name]}</b><small>${r[C.code]}</small></td>` +
         cell(r[C.sector], 'l sec') + cell(fmt(r[C.mcap])) + cell(fmt(r[C.close])) +
@@ -186,5 +202,53 @@
     }).join('');
     $('#cnt').textContent = `${fmt(rows.length)}종목 중 ${fmt(Math.min(shown, rows.length))}개 표시`;
     $('#more').hidden = shown >= rows.length;
+  }
+
+  // ───────── 미너비니 스크리너 ─────────
+  let scK = C.rs, scAsc = false;
+  const SF = { mode: $('#sc-mode'), mkt: $('#sc-mkt'), cap: $('#sc-cap') };
+  Object.values(SF).forEach(x => x.addEventListener('input', renderScreener));
+  document.querySelectorAll('#sc-tbl th').forEach(th => th.addEventListener('click', () => {
+    const k = +th.dataset.k;
+    if (k === scK) scAsc = !scAsc; else { scK = k; scAsc = k === C.name || k === C.sector || k === C.vdry; }
+    renderScreener();
+  }));
+  $('#sc-tbl tbody').addEventListener('click', e => { const tr = e.target.closest('tr'); if (tr) openStock(tr.dataset.c, true); });
+  function renderScreener() {
+    if (!ROWS.length || ROWS[0].length <= C.st) { $('#sc-tbl tbody').innerHTML = '<tr><td class="l" colspan="12">다음 데이터 갱신(평일 16:40) 후에 표시됩니다.</td></tr>'; return; }
+    const mode = SF.mode.value, mkt = SF.mkt.value, cap = +SF.cap.value;
+    const pass = r => {
+      if (r[C.stale]) return false;
+      if (mode === 'tt7') return r[C.tt] >= 7;
+      if (r[C.tt] !== 8) return false;
+      if (mode === 'tt') return true;
+      if (mode === 'brk') return r[C.st] === 'brk';
+      if (!r[C.vcp]) return false;
+      return mode === 'vcp' || r[C.st] === 'near' || r[C.st] === 'brk';
+    };
+    let rows = ROWS.filter(r => pass(r) && (!mkt || r[C.market] === mkt) && (!cap || (r[C.mcap] || 0) >= cap));
+    const k = scK, sgn = scAsc ? 1 : -1;
+    rows.sort((a, b) => {
+      let x = a[k], y = b[k];
+      if (k === C.dep) { x = (a[k] || []).slice(-1)[0]; y = (b[k] || []).slice(-1)[0]; }
+      if (x == null || x === '') return 1; if (y == null || y === '') return -1;
+      return (typeof x === 'string' ? x.localeCompare(y, 'ko') : x - y) * sgn;
+    });
+    document.querySelectorAll('#sc-tbl th').forEach(th => {
+      th.classList.toggle('sorted', +th.dataset.k === k); th.classList.toggle('asc', +th.dataset.k === k && scAsc);
+    });
+    const cell = (v, cls = '') => `<td class="${cls}">${v ?? '–'}</td>`;
+    $('#sc-tbl tbody').innerHTML = rows.slice(0, 300).map(r => {
+      const c = r[C.chg], st = ST[r[C.st]], dep = r[C.dep] || [];
+      return `<tr data-c="${r[C.code]}"><td class="l name"><b>${r[C.name]}</b><small>${r[C.code]}</small></td>` +
+        cell(r[C.sector], 'l sec') + cell(fmt(r[C.mcap])) + cell(fmt(r[C.close])) +
+        cell(`${c >= 0 ? '+' : ''}${c}%`, c > 0 ? 'up' : c < 0 ? 'down' : '') +
+        cell(r[C.rs], 'rs-cell') + cell(`${r[C.tt]}/8`) +
+        cell(dep.length ? dep.map(x => x + '%').join(' → ') + (r[C.vcp] ? ' <span class="badge b-vcp">VCP</span>' : '') : '–', 'l dep') +
+        cell(r[C.vdry] == null ? '–' : r[C.vdry].toFixed(2), r[C.vdry] != null && r[C.vdry] < 0.8 ? 'up' : '') +
+        cell(fmt(r[C.pivot])) + cell(r[C.pvd] == null ? '–' : (r[C.pvd] > 0 ? '+' : '') + r[C.pvd] + '%') +
+        `<td>${st ? (st[1] ? `<span class="badge ${st[1]}">${st[0]}</span>` : st[0]) : ''}</td></tr>`;
+    }).join('') || '<tr><td class="l" colspan="12">오늘은 조건에 맞는 종목이 없습니다. 위에서 조건을 넓혀 보세요.</td></tr>';
+    $('#sc-cnt').textContent = `${fmt(rows.length)}종목` + (rows.length > 300 ? ' (상위 300개 표시)' : '');
   }
 })();

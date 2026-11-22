@@ -248,6 +248,83 @@ def compute(universe, prices, idx):
     return cal, close, rs
 
 
+# ───────────────────────── 4. 미너비니 스크리너 ─────────────────────────
+TT_NAMES = ["종가 > 150·200일선", "150일선 > 200일선", "200일선 1개월 상승", "50일선 > 150·200일선",
+            "종가 > 50일선", "52주 저점 대비 +30%↑", "52주 고점 대비 −25% 이내", "RS 70↑"]
+
+
+def screen(sub, rs_now):
+    """트렌드 템플릿(8개 조건)과 VCP(변동성 수축) 판정.
+    sub: 상장 후 일봉(o,h,l,c,v), 날짜 오름차순."""
+    out = dict(tt=0, ttm=0, vcp=0, dep=[], pivot=None, pvd=None, vdry=None, st="")
+    c = sub["c"].to_numpy(float); h = sub["h"].to_numpy(float)
+    l = sub["l"].to_numpy(float); v = sub["v"].to_numpy(float)
+    n = len(c)
+    if n < 60:
+        return out
+    last = c[-1]
+    s = pd.Series(c)
+    ma = {k: s.rolling(k).mean().to_numpy() for k in (50, 150, 200)}
+    v50 = v[-50:].mean()
+    out["vdry"] = round(float(v[-10:].mean() / v50), 2) if v50 > 0 else None
+
+    # ① 트렌드 템플릿 — 이동평균이 계산 안 되는 신규 상장주는 해당 조건 불통과
+    if n >= 222:
+        hi52, lo52 = h[-250:].max(), l[-250:].min()
+        m50, m150, m200 = ma[50][-1], ma[150][-1], ma[200][-1]
+        checks = [last > m150 and last > m200, m150 > m200, m200 > ma[200][-22],
+                  m50 > m150 and m50 > m200, last > m50, last >= lo52 * 1.30,
+                  last >= hi52 * 0.75, (rs_now or 0) >= 70]
+        out["tt"] = int(sum(checks))
+        out["ttm"] = int(sum(1 << i for i, b in enumerate(checks) if b))
+
+    # ② VCP — 최근 약 4개월(90거래일) 베이스 안의 고점→저점 하락폭이 점점 줄어드는지
+    B, k = min(n, 90), 4
+    hh, ll = h[-B:], l[-B:]
+    piv = []
+    for i in range(k, B - k):
+        if hh[i] == hh[i - k:i + k + 1].max():
+            piv.append((i, "H", hh[i]))
+        elif ll[i] == ll[i - k:i + k + 1].min():
+            piv.append((i, "L", ll[i]))
+    zz = []                                   # 고점·저점이 번갈아 나오도록 정리
+    for p in piv:
+        if zz and zz[-1][1] == p[1]:
+            if (p[1] == "H" and p[2] >= zz[-1][2]) or (p[1] == "L" and p[2] <= zz[-1][2]):
+                zz[-1] = p
+        else:
+            zz.append(p)
+    highs = [p for p in zz if p[1] == "H"]
+    if not highs:
+        return out
+    top = max(highs, key=lambda p: p[2])     # 베이스의 왼쪽 고점 = 구간 최고점
+    hs = [p for p in highs if p[0] >= top[0]]
+    dep = []
+    for j, p in enumerate(hs):
+        end = hs[j + 1][0] if j + 1 < len(hs) else B
+        seg = ll[p[0]:end]
+        if len(seg):
+            dep.append((p[2] - seg.min()) / p[2])
+    pivot = hs[-1][2]
+    out["dep"] = [round(float(d) * 100, 1) for d in dep]
+    out["pivot"] = round(float(pivot))
+    out["pvd"] = round(float((last / pivot - 1) * 100), 1)
+    shrinking = all(dep[i] < dep[i - 1] for i in range(1, len(dep)))
+    out["vcp"] = int(len(dep) >= 2 and shrinking and dep[0] <= 0.40 and dep[-1] <= 0.12
+                     and B - top[0] >= 15)
+    if len(dep) < 2:
+        out["st"] = ""                        # 수축이 1번뿐이면 베이스로 보지 않음
+    elif last > pivot and v50 > 0 and v[-1] >= 1.4 * v50 and out["pvd"] <= 5:
+        out["st"] = "brk"                     # 오늘 거래량 실린 피벗 돌파
+    elif -6 <= out["pvd"] <= 0:
+        out["st"] = "near"                    # 피벗 아래 6% 이내
+    elif out["pvd"] > 0:
+        out["st"] = "above"
+    else:
+        out["st"] = "base"
+    return out
+
+
 def clean(o):
     if isinstance(o, float):
         return None if (o != o or o in (float("inf"), float("-inf"))) else o
@@ -304,12 +381,18 @@ def main():
             return None if pd.isna(v) else int(v)
 
         prev_c = float(sub["c"].iloc[-2]) if len(sub) > 1 else last_c
+        try:
+            sc = screen(sub, rs_at(0))
+        except Exception as e:
+            print("  스크리너 계산 실패:", c, e)
+            sc = dict(tt=0, ttm=0, vcp=0, dep=[], pivot=None, pvd=None, vdry=None, st="")
         summary.append([
             c, u["name"], u["market"], u["sector"], u["mcap"], last_c,
             round((last_c / prev_c - 1) * 100, 2) if prev_c > 0 else 0.0,
             rs_at(0), rs_at(5), rs_at(21), rs_at(63),
             int(price_nh), 0, from_hi,   # nh = 주가 52주 신고가 (RS 라인 신호는 표시 안 함)
             dates[-1] != as_of,     # 거래정지 등으로 최근일 데이터 없음
+            sc["tt"], sc["ttm"], sc["vcp"], sc["dep"], sc["pivot"], sc["pvd"], sc["vdry"], sc["st"],
         ])
 
         # RS 점수 추이는 12개월 수익률을 온전히 계산할 수 있는 최근 RS_HISTORY일만 표시
@@ -330,7 +413,9 @@ def main():
         "built_at": datetime.now(KST).strftime("%Y-%m-%d %H:%M"),
         "count": len(summary),
         "cols": ["code", "name", "market", "sector", "mcap", "close", "chg", "rs",
-                 "rs_1w", "rs_1m", "rs_3m", "price_nh", "unused", "from_hi", "stale"],
+                 "rs_1w", "rs_1m", "rs_3m", "price_nh", "unused", "from_hi", "stale",
+                 "tt", "tt_mask", "vcp", "vcp_depths", "pivot", "pivot_dist", "vol_dry", "status"],
+        "tt_names": TT_NAMES,
     }
     # 지수도 저장 (차트 비교용)
     for m in ("KOSPI", "KOSDAQ"):

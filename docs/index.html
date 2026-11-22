@@ -38,7 +38,44 @@
       <div class="legend" id="legend"></div>
     </div>
     <div id="chart"></div>
-    <div class="pane-labels"><span>주가 · 거래량</span><span>RS 점수 (70 이상만 표시)</span></div>
+    <div class="pane-labels"><span>주가 · 거래량 · 이동평균 <i style="color:#f08c00">50</i> <i style="color:#2f9e44">150</i> <i style="color:#495057">200</i> · <i style="color:#e8590c">피벗(점선)</i></span><span>RS 점수 (70 이상만 표시)</span></div>
+    <div class="tt-box" id="s-tt"></div>
+  </section>
+
+  <section class="card" id="screener">
+    <div class="list-head">
+      <h2>미너비니 스크리너 <small id="sc-cnt" class="muted"></small></h2>
+      <div class="filters">
+        <select id="sc-mode">
+          <option value="near">트렌드 템플릿 + VCP + 피벗 근접</option>
+          <option value="brk">오늘 피벗 돌파 (거래량 1.4배↑)</option>
+          <option value="vcp">트렌드 템플릿 + VCP</option>
+          <option value="tt">트렌드 템플릿 8/8 전부</option>
+          <option value="tt7">트렌드 템플릿 7/8 이상</option>
+        </select>
+        <select id="sc-mkt"><option value="">전체 시장</option><option>KOSPI</option><option>KOSDAQ</option></select>
+        <select id="sc-cap">
+          <option value="0">시총 전체</option><option value="1000" selected>1,000억↑</option>
+          <option value="5000">5,000억↑</option><option value="10000">1조↑</option>
+        </select>
+      </div>
+    </div>
+    <div class="table-wrap">
+      <table id="sc-tbl">
+        <thead><tr>
+          <th data-k="1" class="l">종목</th><th data-k="3" class="l">업종</th><th data-k="4">시총(억)</th>
+          <th data-k="5">종가</th><th data-k="6">등락</th><th data-k="7">RS</th><th data-k="15">템플릿</th>
+          <th data-k="18" class="l">수축 (고점→저점)</th><th data-k="21">거래량 10일/50일</th>
+          <th data-k="19">피벗</th><th data-k="20">피벗까지</th><th data-k="22">상태</th>
+        </tr></thead>
+        <tbody></tbody>
+      </table>
+    </div>
+    <p class="note">
+      <b>트렌드 템플릿</b>: 종가 &gt; 150·200일선, 150일선 &gt; 200일선, 200일선 1개월 상승, 50일선 &gt; 150·200일선, 종가 &gt; 50일선, 52주 저점 대비 +30% 이상, 52주 고점 대비 −25% 이내, RS 70 이상.
+      <b>VCP</b>: 최근 약 4개월 베이스에서 고점→저점 하락폭이 2번 이상 연속으로 줄고(첫 수축 40% 이하, 마지막 12% 이하), 베이스가 3주 이상. <b>피벗</b> = 마지막 수축이 시작된 고점.
+      <b>거래량 10일/50일</b>이 1보다 작을수록 거래량이 말라 있는 것. 기계적 판정이니 반드시 차트로 확인하세요.
+    </p>
   </section>
 
   <section class="card">
