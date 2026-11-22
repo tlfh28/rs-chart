@@ -41,7 +41,7 @@ h2{margin:0;font-size:18px}
 .seg button.on{background:#111827;color:#fff;border-color:#111827}
 .legend{font-size:12px;color:var(--mute);font-variant-numeric:tabular-nums}
 .legend b{color:var(--ink);font-weight:600}
-#chart{height:620px}
+#chart{height:820px}
 .pane-labels{display:flex;justify-content:space-between;font-size:11px;color:var(--mute);margin-top:6px}
 .list-head{display:flex;justify-content:space-between;align-items:center;gap:12px;flex-wrap:wrap;margin-bottom:12px}
 .filters{display:flex;gap:8px;flex-wrap:wrap}
@@ -65,5 +65,5 @@ td.sec{max-width:180px;overflow:hidden;text-overflow:ellipsis;color:var(--mute)}
 footer{font-size:12px;color:var(--mute);line-height:1.6}
 @media (max-width:720px){
   .top{flex-wrap:wrap;padding:10px 14px}.asof{display:none}
-  main{padding:12px}#chart{height:520px}.rs-big .val{font-size:34px}
+  main{padding:12px}#chart{height:680px}.rs-big .val{font-size:34px}
 }

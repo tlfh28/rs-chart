@@ -78,14 +78,20 @@
   const rsl = chart.addSeries(LC.LineSeries, { color: '#0f766e', lineWidth: 2, priceFormat: { type: 'price', precision: 1, minMove: 0.1 } }, 1);
   const rsm = LC.createSeriesMarkers(rsl, []);
   const rss = chart.addSeries(LC.LineSeries, {
-    color: '#7048e8', lineWidth: 2, priceFormat: { type: 'price', precision: 0, minMove: 1 },
-    autoscaleInfoProvider: () => ({ priceRange: { minValue: 0, maxValue: 100 } }),
+    color: '#7048e8', lineWidth: 3, priceFormat: { type: 'price', precision: 0, minMove: 1 },
+    // 세로축을 40~100에 집중 (화면에 보이는 RS가 40 아래로 내려갈 때만 아래로 확장)
+    autoscaleInfoProvider: (orig) => {
+      const r = orig(); const lo = r ? r.priceRange.minValue : 40;
+      return { priceRange: { minValue: Math.max(0, Math.min(40, Math.floor((lo - 5) / 10) * 10)), maxValue: 100 },
+        margins: { above: 6, below: 6 } };
+    },
   }, 2);
-  [[90, '#7048e8'], [80, '#9775fa'], [70, '#c5b3f7']].forEach(([p, c]) =>
-    rss.createPriceLine({ price: p, color: c, lineWidth: 1, lineStyle: LC.LineStyle.Dashed, axisLabelVisible: true, title: '' }));
+  // RS 점수 기준선: 50·60·70·80·90 (50→90 올라가는 흐름을 한눈에)
+  [[90, '#5f3dc4', 2], [80, '#7048e8', 1], [70, '#9775fa', 1], [60, '#b197fc', 1], [50, '#adb5bd', 1]].forEach(([p, c, w]) =>
+    rss.createPriceLine({ price: p, color: c, lineWidth: w, lineStyle: LC.LineStyle.Dashed, axisLabelVisible: true, title: '' }));
   function setPaneHeights() {
     const ps = chart.panes(); const H = el.clientHeight;
-    if (ps.length === 3) { ps[0].setHeight(Math.round(H * 0.56)); ps[1].setHeight(Math.round(H * 0.22)); ps[2].setHeight(Math.round(H * 0.22)); }
+    if (ps.length === 3) { ps[0].setHeight(Math.round(H * 0.46)); ps[1].setHeight(Math.round(H * 0.20)); ps[2].setHeight(Math.round(H * 0.34)); }
   }
 
   let cur = null, curRange = 250;
