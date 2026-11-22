@@ -1,1 +1,1 @@
-{'as_of': '20261120', 'built_at': '2026-11-22 15:27', 'count': 2593, 'cols': ['code', 'name', 'market', 'sector', 'mcap', 'close', 'chg', 'rs', 'rs_1w', 'rs_1m', 'rs_3m', 'rsl_nh', 'rsl_lead', 'from_hi', 'stale']}
+{'as_of': '20261120', 'built_at': '2026-11-22 15:53', 'count': 2593, 'cols': ['code', 'name', 'market', 'sector', 'mcap', 'close', 'chg', 'rs', 'rs_1w', 'rs_1m', 'rs_3m', 'rsl_nh', 'rsl_lead', 'from_hi', 'stale']}
