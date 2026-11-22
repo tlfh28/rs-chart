@@ -295,7 +295,8 @@ def main():
         rsl_nh = bool(rsl.loc[last250].iloc[-1] >= rsl.loc[last250].max() * 0.9999)
         hi250 = sub["h"].loc[last250].max()
         last_c = round(float(sub["c"].iloc[-1]), 2)
-        price_nh = bool(float(sub["h"].iloc[-1]) >= hi250 * 0.9999)  # 오늘 고가가 52주 최고가 = 주가 52주 신고가
+        # 주가 52주 신고가: 오늘 종가가 최근 52주(250거래일) 종가 중 최고 (상장 60거래일 미만 제외)
+        price_nh = bool(len(dates) >= 60 and last_c >= float(sub["c"].loc[last250].max()) * 0.9999)
         from_hi = round((last_c / hi250 - 1) * 100, 1) if hi250 > 0 else None
 
         def rs_at(k):
