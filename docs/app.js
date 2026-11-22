@@ -75,15 +75,15 @@
   const vol = chart.addSeries(LC.HistogramSeries, { priceFormat: { type: 'volume' }, priceScaleId: 'vol', lastValueVisible: false, priceLineVisible: false }, 0);
   vol.priceScale().applyOptions({ scaleMargins: { top: 0.82, bottom: 0 } });
   candle.priceScale().applyOptions({ scaleMargins: { top: 0.06, bottom: 0.2 } });
-  // RS 점수: 50~100만 표시 (50 미만은 잘라냄), 5점 단위 눈금
+  // RS 점수: 70~100만 표시 (70 미만은 잘라냄), 5점 단위 눈금
   const rss = chart.addSeries(LC.LineSeries, {
     color: '#6741d9', lineWidth: 3, priceFormat: { type: 'price', precision: 0, minMove: 1 },
     crosshairMarkerRadius: 5,
-    autoscaleInfoProvider: () => ({ priceRange: { minValue: 50, maxValue: 100 }, margins: { above: 0, below: 0 } }),
+    autoscaleInfoProvider: () => ({ priceRange: { minValue: 70, maxValue: 100 }, margins: { above: 0, below: 0 } }),
   }, 1);
-  for (let p = 55; p <= 95; p += 10)   // 55·65·75·85·95: 옅은 보조선
+  for (let p = 75; p <= 95; p += 10)   // 75·85·95: 옅은 보조선
     rss.createPriceLine({ price: p, color: '#e9e4fb', lineWidth: 1, lineStyle: LC.LineStyle.Solid, axisLabelVisible: true, axisLabelColor: '#f3f0ff', axisLabelTextColor: '#9c8fd0', title: '' });
-  [[50, '#adb5bd'], [60, '#b197fc'], [70, '#9775fa'], [80, '#7048e8'], [90, '#5f3dc4']].forEach(([p, c]) =>  // 10점 단위: 진한 기준선
+  [[70, '#9775fa'], [80, '#7048e8'], [90, '#5f3dc4']].forEach(([p, c]) =>  // 10점 단위: 진한 기준선
     rss.createPriceLine({ price: p, color: c, lineWidth: p === 90 ? 2 : 1, lineStyle: LC.LineStyle.Dashed, axisLabelVisible: true, title: '' }));
   rss.priceScale().applyOptions({ ticksVisible: false, textColor: 'rgba(0,0,0,0)', scaleMargins: { top: 0.03, bottom: 0.03 } });
   function setPaneHeights() {
@@ -120,7 +120,7 @@
     const t = d.d.map(ds);
     candle.setData(t.map((time, i) => ({ time, open: d.o[i], high: d.h[i], low: d.l[i], close: d.c[i] })));
     vol.setData(t.map((time, i) => ({ time, value: d.v[i], color: d.c[i] >= d.o[i] ? 'rgba(214,51,108,.35)' : 'rgba(28,126,214,.35)' })));
-    rss.setData(t.map((time, i) => d.rs[i] == null || d.rs[i] < 50 ? { time } : { time, value: d.rs[i] }));  // 50 미만은 표시 안 함
+    rss.setData(t.map((time, i) => d.rs[i] == null || d.rs[i] < 70 ? { time } : { time, value: d.rs[i] }));  // 70 미만은 표시 안 함
     setPaneHeights();
     applyRange();
     updateLegend(null);
