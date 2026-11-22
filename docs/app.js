@@ -101,8 +101,7 @@
     $('#s-rs').textContent = r[C.rs] ?? '–';
     const chg = r[C.chg];
     const badges = [];
-    if (r[C.nh]) badges.push('<span class="badge b-nh">RS 라인 52주 신고가</span>');
-    if (r[C.lead]) badges.push('<span class="badge b-lead">RS 라인 선행</span>');
+    if (r[C.nh]) badges.push('<span class="badge b-nh">52주 신고가</span>');
     if (r[C.rs] != null && r[C.rs1m] != null && r[C.rs] - r[C.rs1m] >= 20) badges.push('<span class="badge b-up">RS 급상승</span>');
     if (r[C.stale]) badges.push('<span class="badge">최근 거래 없음</span>');
     $('#s-stats').innerHTML = [
@@ -162,13 +161,13 @@
     let rows = ROWS.filter(r =>
       (!mkt || r[C.market] === mkt) && (!cap || (r[C.mcap] || 0) >= cap) &&
       (!rsMin || (r[C.rs] || 0) >= rsMin) &&
-      (!sig || (sig === 'nh' && r[C.nh]) || (sig === 'lead' && r[C.lead]) ||
+      (!sig || (sig === 'nh' && r[C.nh]) ||
         (sig === 'up' && r[C.rs] != null && r[C.rs1m] != null && r[C.rs] - r[C.rs1m] >= 20)) &&
       (!sec || norm(r[C.sector] || '').includes(sec)));
     const k = sortK, sgn = asc ? 1 : -1;
     rows.sort((a, b) => {
       let x = a[k], y = b[k];
-      if (k === C.nh) { x = a[C.nh] * 2 + a[C.lead]; y = b[C.nh] * 2 + b[C.lead]; }
+      if (k === C.nh) { x = a[C.nh]; y = b[C.nh]; }
       if (x == null) return 1; if (y == null) return -1;
       return (typeof x === 'string' ? x.localeCompare(y, 'ko') : x - y) * sgn;
     });
@@ -177,7 +176,7 @@
     });
     const cell = (v, cls = '') => `<td class="${cls}">${v ?? '–'}</td>`;
     $('#tbl tbody').innerHTML = rows.slice(0, shown).map(r => {
-      const sigs = (r[C.nh] ? '<span class="badge b-nh">신고가</span> ' : '') + (r[C.lead] ? '<span class="badge b-lead">선행</span>' : '');
+      const sigs = (r[C.nh] ? '<span class="badge b-nh">신고가</span>' : '');
       const c = r[C.chg];
       return `<tr data-c="${r[C.code]}"><td class="l name"><b>${r[C.name]}</b><small>${r[C.code]}</small></td>` +
         cell(r[C.sector], 'l sec') + cell(fmt(r[C.mcap])) + cell(fmt(r[C.close])) +

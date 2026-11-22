@@ -56,8 +56,7 @@
         </select>
         <select id="f-sig">
           <option value="">신호 전체</option>
-          <option value="nh">RS 라인 52주 신고가</option>
-          <option value="lead">RS 라인 선행 (주가는 아직 신고가 아님)</option>
+          <option value="nh">52주 신고가 (주가)</option>
           <option value="up">RS 급상승 (1개월 +20↑)</option>
         </select>
         <input id="f-sec" type="search" placeholder="업종 검색">
@@ -79,7 +78,7 @@
 
   <footer>
     RS 점수: 최근 3·6·9·12개월 수익률을 2:1:1:1로 가중한 값의 코스피+코스닥 전 종목 내 백분위 (IBD 방식 근사).
-    RS 라인: 종가 ÷ 소속 시장 지수. 상장 3개월 미만 종목은 RS 점수 없음. 데이터: KIND · 네이버 금융. 투자 참고용.
+    52주 신고가: 당일 고가가 최근 52주(250거래일) 최고가 이상인 종목. 상장 3개월 미만 종목은 RS 점수 없음. 데이터: KIND · 네이버 금융. 투자 참고용.
   </footer>
 </main>
 

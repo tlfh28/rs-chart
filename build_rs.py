@@ -295,7 +295,7 @@ def main():
         rsl_nh = bool(rsl.loc[last250].iloc[-1] >= rsl.loc[last250].max() * 0.9999)
         hi250 = sub["h"].loc[last250].max()
         last_c = round(float(sub["c"].iloc[-1]), 2)
-        price_nh = bool(last_c >= hi250 * 0.9999)
+        price_nh = bool(float(sub["h"].iloc[-1]) >= hi250 * 0.9999)  # 오늘 고가가 52주 최고가 = 주가 52주 신고가
         from_hi = round((last_c / hi250 - 1) * 100, 1) if hi250 > 0 else None
 
         def rs_at(k):
@@ -307,7 +307,7 @@ def main():
             c, u["name"], u["market"], u["sector"], u["mcap"], last_c,
             round((last_c / prev_c - 1) * 100, 2) if prev_c > 0 else 0.0,
             rs_at(0), rs_at(5), rs_at(21), rs_at(63),
-            int(rsl_nh), int(rsl_nh and not price_nh), from_hi,
+            int(price_nh), 0, from_hi,   # nh = 주가 52주 신고가 (RS 라인 신호는 표시 안 함)
             dates[-1] != as_of,     # 거래정지 등으로 최근일 데이터 없음
         ])
 
@@ -329,7 +329,7 @@ def main():
         "built_at": datetime.now(KST).strftime("%Y-%m-%d %H:%M"),
         "count": len(summary),
         "cols": ["code", "name", "market", "sector", "mcap", "close", "chg", "rs",
-                 "rs_1w", "rs_1m", "rs_3m", "rsl_nh", "rsl_lead", "from_hi", "stale"],
+                 "rs_1w", "rs_1m", "rs_3m", "price_nh", "unused", "from_hi", "stale"],
     }
     # 지수도 저장 (차트 비교용)
     for m in ("KOSPI", "KOSDAQ"):
