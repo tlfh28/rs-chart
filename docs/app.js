@@ -75,23 +75,20 @@
   const vol = chart.addSeries(LC.HistogramSeries, { priceFormat: { type: 'volume' }, priceScaleId: 'vol', lastValueVisible: false, priceLineVisible: false }, 0);
   vol.priceScale().applyOptions({ scaleMargins: { top: 0.82, bottom: 0 } });
   candle.priceScale().applyOptions({ scaleMargins: { top: 0.06, bottom: 0.2 } });
-  const rsl = chart.addSeries(LC.LineSeries, { color: '#0f766e', lineWidth: 2, priceFormat: { type: 'price', precision: 1, minMove: 0.1 } }, 1);
-  const rsm = LC.createSeriesMarkers(rsl, []);
+  // RS 점수: 50~100만 표시 (50 미만은 잘라냄), 5점 단위 눈금
   const rss = chart.addSeries(LC.LineSeries, {
-    color: '#7048e8', lineWidth: 3, priceFormat: { type: 'price', precision: 0, minMove: 1 },
-    // 세로축을 40~100에 집중 (화면에 보이는 RS가 40 아래로 내려갈 때만 아래로 확장)
-    autoscaleInfoProvider: (orig) => {
-      const r = orig(); const lo = r ? r.priceRange.minValue : 40;
-      return { priceRange: { minValue: Math.max(0, Math.min(40, Math.floor((lo - 5) / 10) * 10)), maxValue: 100 },
-        margins: { above: 6, below: 6 } };
-    },
-  }, 2);
-  // RS 점수 기준선: 50·60·70·80·90 (50→90 올라가는 흐름을 한눈에)
-  [[90, '#5f3dc4', 2], [80, '#7048e8', 1], [70, '#9775fa', 1], [60, '#b197fc', 1], [50, '#adb5bd', 1]].forEach(([p, c, w]) =>
-    rss.createPriceLine({ price: p, color: c, lineWidth: w, lineStyle: LC.LineStyle.Dashed, axisLabelVisible: true, title: '' }));
+    color: '#6741d9', lineWidth: 3, priceFormat: { type: 'price', precision: 0, minMove: 1 },
+    crosshairMarkerRadius: 5,
+    autoscaleInfoProvider: () => ({ priceRange: { minValue: 50, maxValue: 100 }, margins: { above: 0, below: 0 } }),
+  }, 1);
+  for (let p = 55; p <= 95; p += 10)   // 55·65·75·85·95: 옅은 보조선
+    rss.createPriceLine({ price: p, color: '#e9e4fb', lineWidth: 1, lineStyle: LC.LineStyle.Solid, axisLabelVisible: true, axisLabelColor: '#f3f0ff', axisLabelTextColor: '#9c8fd0', title: '' });
+  [[50, '#adb5bd'], [60, '#b197fc'], [70, '#9775fa'], [80, '#7048e8'], [90, '#5f3dc4']].forEach(([p, c]) =>  // 10점 단위: 진한 기준선
+    rss.createPriceLine({ price: p, color: c, lineWidth: p === 90 ? 2 : 1, lineStyle: LC.LineStyle.Dashed, axisLabelVisible: true, title: '' }));
+  rss.priceScale().applyOptions({ ticksVisible: false, textColor: 'rgba(0,0,0,0)', scaleMargins: { top: 0.03, bottom: 0.03 } });
   function setPaneHeights() {
     const ps = chart.panes(); const H = el.clientHeight;
-    if (ps.length === 3) { ps[0].setHeight(Math.round(H * 0.46)); ps[1].setHeight(Math.round(H * 0.20)); ps[2].setHeight(Math.round(H * 0.34)); }
+    if (ps.length === 2) { ps[0].setHeight(Math.round(H * 0.55)); ps[1].setHeight(Math.round(H * 0.45)); }
   }
 
   let cur = null, curRange = 250;
@@ -123,17 +120,7 @@
     const t = d.d.map(ds);
     candle.setData(t.map((time, i) => ({ time, open: d.o[i], high: d.h[i], low: d.l[i], close: d.c[i] })));
     vol.setData(t.map((time, i) => ({ time, value: d.v[i], color: d.c[i] >= d.o[i] ? 'rgba(214,51,108,.35)' : 'rgba(28,126,214,.35)' })));
-    rsl.setData(t.map((time, i) => ({ time, value: d.rsl[i] })));
-    rss.setData(t.map((time, i) => d.rs[i] == null ? { time } : { time, value: d.rs[i] }));
-    // RS 라인 52주(250거래일) 신고가 지점 표시
-    const mk = []; let dq = [];
-    for (let i = 0; i < d.rsl.length; i++) {
-      while (dq.length && dq[0] <= i - 250) dq.shift();
-      while (dq.length && d.rsl[dq[dq.length - 1]] <= d.rsl[i]) dq.pop();
-      dq.push(i);
-      if (i >= 120 && dq[0] === i) mk.push({ time: t[i], position: 'inBar', color: '#0f766e', shape: 'circle', size: 0.4 });
-    }
-    rsm.setMarkers(mk);
+    rss.setData(t.map((time, i) => d.rs[i] == null || d.rs[i] < 50 ? { time } : { time, value: d.rs[i] }));  // 50 미만은 표시 안 함
     setPaneHeights();
     applyRange();
     updateLegend(null);
@@ -154,7 +141,7 @@
     if (!cur) return;
     let i = cur.d.length - 1;
     if (p && p.time) { const k = cur.d.indexOf(+String(p.time.year ? `${p.time.year}${String(p.time.month).padStart(2,'0')}${String(p.time.day).padStart(2,'0')}` : p.time).replace(/-/g, '')); if (k >= 0) i = k; }
-    $('#legend').innerHTML = `${ds(cur.d[i])} &nbsp; 시 <b>${fmt(cur.o[i])}</b> 고 <b>${fmt(cur.h[i])}</b> 저 <b>${fmt(cur.l[i])}</b> 종 <b>${fmt(cur.c[i])}</b> &nbsp; 거래량 <b>${fmt(cur.v[i])}</b> &nbsp; RS라인 <b>${cur.rsl[i]}</b> &nbsp; RS <b>${cur.rs[i] ?? '–'}</b>`;
+    $('#legend').innerHTML = `${ds(cur.d[i])} &nbsp; 시 <b>${fmt(cur.o[i])}</b> 고 <b>${fmt(cur.h[i])}</b> 저 <b>${fmt(cur.l[i])}</b> 종 <b>${fmt(cur.c[i])}</b> &nbsp; 거래량 <b>${fmt(cur.v[i])}</b> &nbsp; RS <b>${cur.rs[i] ?? '–'}</b>`;
   }
   chart.subscribeCrosshairMove(updateLegend);
 
